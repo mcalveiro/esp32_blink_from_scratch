@@ -1,35 +1,94 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C6 | ESP32-H2 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
+# ESP32 Blink from Scratch
 
-# _Sample project_
+Este proyecto demuestra cómo hacer parpadear un LED conectado a un ESP32 utilizando una máquina de estados. El programa está escrito en C y se basa en el framework ESP-IDF de Espressif.
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+## Descripción
 
-This is the simplest buildable example. The example is used by command `idf.py create-project`
-that copies the project to user specified path and set it's name. For more information follow the [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project)
+El código configura un pin GPIO del ESP32 para controlar un LED. Utiliza una máquina de estados simple para alternar el estado del LED entre encendido y apagado en intervalos regulares de 200 ms.
 
+### Funciones Principales
 
+- **`app_main(void)`**: Esta es la función principal del programa. Inicializa el LED y entra en un bucle infinito donde llama a la máquina de estados del LED cada 200 ms.
 
-## How to use example
-We encourage the users to use the example as a template for the new projects.
-A recommended way is to follow the instructions on a [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project).
+- **`init_led(void)`**: Esta función configura el pin GPIO donde está conectado el LED como una salida. También resetea cualquier configuración previa del pin.
 
-## Example folder contents
+- **`led_state_machine(void)`**: Esta es la máquina de estados del LED. Alterna el estado del LED entre `LED_OFF` y `LED_ON`. Si el LED está apagado, lo enciende, y viceversa. Además, imprime el estado actual del LED en la consola.
 
-The project **sample_project** contains one source file in C language [main.c](main/main.c). The file is located in folder [main](main).
+## Código
 
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt`
-files that provide set of directives and instructions describing the project's source files and targets
-(executable, library, or both). 
+```c
+#include <stdio.h>
+#include "driver/gpio.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
-Below is short explanation of remaining files in the project folder.
+// Define el pin del LED
+#define LED_PIN 2
 
-```
-├── CMakeLists.txt
-├── main
-│   ├── CMakeLists.txt
-│   └── main.c
-└── README.md                  This is the file you are currently reading
-```
-Additionally, the sample project contains Makefile and component.mk files, used for the legacy Make based build system. 
-They are not used or needed when building with CMake and idf.py.
+// Enumeración de estados del LED
+typedef enum {
+    LED_OFF,
+    LED_ON
+} led_state_t;
+
+// Variable global para almacenar el estado del LED
+led_state_t current_state = LED_OFF;
+
+// Declaración de funciones
+esp_err_t init_led(void);
+void led_state_machine(void);
+
+// Función principal del programa
+void app_main(void)
+{
+    // Inicializa el LED
+    if (init_led() != ESP_OK) {
+        printf("Failed to initialize the LED\n");
+        return;
+    }
+
+    // Bucle infinito para manejar la máquina de estado del LED
+    while (1)
+    {
+        // Espera 200 milisegundos
+        vTaskDelay(200 / portTICK_PERIOD_MS);
+        // Ejecuta la máquina de estados del LED
+        led_state_machine();
+    }
+}
+
+// Función para inicializar el pin del LED
+esp_err_t init_led(void)
+{
+    // Resetea la configuración del pin del LED
+    gpio_reset_pin(LED_PIN);
+    // Establece el pin del LED como salida
+    if (gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT) != ESP_OK) {
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+}
+
+// Máquina de estado del LED
+void led_state_machine(void)
+{
+    switch (current_state)
+    {
+        case LED_OFF:
+            // Cambia el estado a encendido
+            current_state = LED_ON;
+            gpio_set_level(LED_PIN, 1);
+            printf("LED is now ON\n");
+            break;
+        case LED_ON:
+            // Cambia el estado a apagado
+            current_state = LED_OFF;
+            gpio_set_level(LED_PIN, 0);
+            printf("LED is now OFF\n");
+            break;
+        default:
+            // Manejo de estados desconocidos (aunque no debería ocurrir)
+            printf("Unknown state\n");
+            break;
+    }
+}
