@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "blink_from_scratch",
-    "project_version":    "1",
+    "project_version":    "4fa9d27-dirty",
     "project_path":       "D:/Developer/Esp32_code/blink_from_scratch",
     "idf_path":           "C:/ESP32/v5.2.1/esp-idf",
     "build_dir":          "D:/Developer/Esp32_code/blink_from_scratch/build",
