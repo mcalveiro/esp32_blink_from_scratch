@@ -2,9 +2,13 @@
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 
 // Define el pin del LED
 #define LED_PIN 2
+
+// Define el periodo del estado del LED en milisegundos
+#define LED_TOGGLE_PERIOD_MS 500
 
 // Enumeración de estados del LED
 typedef enum {
@@ -17,7 +21,10 @@ led_state_t current_state = LED_OFF;
 
 // Declaración de funciones
 esp_err_t init_led(void);
-void led_state_machine(void);
+void led_state_machine(TimerHandle_t xTimerHandle);
+
+// Manejador del temporizador
+TimerHandle_t xTimer = NULL;
 
 // Función principal del programa
 void app_main(void)
@@ -28,13 +35,14 @@ void app_main(void)
         return;
     }
 
-    // Bucle infinito para manejar la máquina de estado del LED
-    while (1)
-    {
-        // Espera 200 milisegundos
-        vTaskDelay(200 / portTICK_PERIOD_MS);
-        // Ejecuta la máquina de estados del LED
-        led_state_machine();
+    // Crear el temporizador de software
+    xTimer = xTimerCreate("LED Timer", pdMS_TO_TICKS(LED_TOGGLE_PERIOD_MS), pdTRUE, NULL, led_state_machine);
+
+    // Iniciar el temporizador de software
+    if (xTimer != NULL) {
+        xTimerStart(xTimer, 0);
+    } else {
+        printf("Failed to create the timer\n");
     }
 }
 
@@ -51,7 +59,7 @@ esp_err_t init_led(void)
 }
 
 // Máquina de estado del LED
-void led_state_machine(void)
+void led_state_machine(TimerHandle_t xTimerHandle)
 {
     switch (current_state)
     {
