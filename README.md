@@ -4,7 +4,7 @@ Este proyecto demuestra cómo hacer parpadear un LED conectado a un ESP32 utiliz
 
 ## Descripción
 
-El código configura un pin GPIO del ESP32 para controlar un LED. Utiliza una máquina de estados simple para alternar el estado del LED entre encendido y apagado en intervalos regulares de 500 ms, utilizando un temporizador de software para asegurar que la implementación sea no bloqueante.
+El código configura un pin GPIO del ESP32 para controlar un LED. Utiliza una máquina de estados simple para alternar el estado del LED entre encendido y apagado en intervalos regulares de 500 ms, utilizando un temporizador de software para asegurar que la implementación sea no bloqueante. (Actualización principal)
 
 ### Funciones Principales
 
