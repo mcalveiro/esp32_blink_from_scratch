@@ -1,18 +1,18 @@
 # ESP32 Blink from Scratch
 
-Este proyecto demuestra cómo hacer parpadear un LED conectado a un ESP32 utilizando una máquina de estados. El programa está escrito en C y se basa en el framework ESP-IDF de Espressif.
+Este proyecto demuestra cómo hacer parpadear un LED conectado a un ESP32 utilizando una máquina de estados y un temporizador de software. El programa está escrito en C y se basa en el framework ESP-IDF de Espressif.
 
 ## Descripción
 
-El código configura un pin GPIO del ESP32 para controlar un LED. Utiliza una máquina de estados simple para alternar el estado del LED entre encendido y apagado en intervalos regulares de 200 ms.
+El código configura un pin GPIO del ESP32 para controlar un LED. Utiliza una máquina de estados simple para alternar el estado del LED entre encendido y apagado en intervalos regulares de 500 ms, utilizando un temporizador de software para asegurar que la implementación sea no bloqueante.
 
 ### Funciones Principales
 
-- **`app_main(void)`**: Esta es la función principal del programa. Inicializa el LED y entra en un bucle infinito donde llama a la máquina de estados del LED cada 200 ms.
+- **`app_main(void)`**: Esta es la función principal del programa. Inicializa el LED y configura un temporizador de software que llama a la máquina de estados del LED en intervalos regulares.
 
-- **`init_led(void)`**: Esta función configura el pin GPIO donde está conectado el LED como una salida. También resetea cualquier configuración previa del pin.
+- **`init_led(void)`**: Esta función configura el pin GPIO donde está conectado el LED como una salida y resetea cualquier configuración previa del pin.
 
-- **`led_state_machine(void)`**: Esta es la máquina de estados del LED. Alterna el estado del LED entre `LED_OFF` y `LED_ON`. Si el LED está apagado, lo enciende, y viceversa. Además, imprime el estado actual del LED en la consola.
+- **`led_state_machine(TimerHandle_t xTimerHandle)`**: Esta es la máquina de estados del LED. Alterna el estado del LED entre `LED_OFF` y `LED_ON`. Si el LED está apagado, lo enciende, y viceversa. Además, imprime el estado actual del LED en la consola.
 
 ## Código
 
@@ -21,9 +21,13 @@ El código configura un pin GPIO del ESP32 para controlar un LED. Utiliza una m�
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 
 // Define el pin del LED
 #define LED_PIN 2
+
+// Define el periodo del estado del LED en milisegundos
+#define LED_TOGGLE_PERIOD_MS 500
 
 // Enumeración de estados del LED
 typedef enum {
@@ -36,7 +40,10 @@ led_state_t current_state = LED_OFF;
 
 // Declaración de funciones
 esp_err_t init_led(void);
-void led_state_machine(void);
+void led_state_machine(TimerHandle_t xTimerHandle);
+
+// Manejador del temporizador
+TimerHandle_t xTimer = NULL;
 
 // Función principal del programa
 void app_main(void)
@@ -47,13 +54,14 @@ void app_main(void)
         return;
     }
 
-    // Bucle infinito para manejar la máquina de estado del LED
-    while (1)
-    {
-        // Espera 200 milisegundos
-        vTaskDelay(200 / portTICK_PERIOD_MS);
-        // Ejecuta la máquina de estados del LED
-        led_state_machine();
+    // Crear el temporizador de software
+    xTimer = xTimerCreate("LED Timer", pdMS_TO_TICKS(LED_TOGGLE_PERIOD_MS), pdTRUE, NULL, led_state_machine);
+
+    // Iniciar el temporizador de software
+    if (xTimer != NULL) {
+        xTimerStart(xTimer, 0);
+    } else {
+        printf("Failed to create the timer\n");
     }
 }
 
@@ -70,7 +78,7 @@ esp_err_t init_led(void)
 }
 
 // Máquina de estado del LED
-void led_state_machine(void)
+void led_state_machine(TimerHandle_t xTimerHandle)
 {
     switch (current_state)
     {
